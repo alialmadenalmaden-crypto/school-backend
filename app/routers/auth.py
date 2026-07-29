@@ -20,7 +20,7 @@ class UserLogin(BaseModel):
     role: Optional[str] = "student"
 
 class InstituteLogin(BaseModel):
-    slug: str
+    slug: Optional[str] = None
     phone: str
     password: str
 
@@ -235,12 +235,16 @@ def resend_code(email: str, db: Session = Depends(get_db)):
 @router.post("/institute/login")
 @router.post("/institute/login/")
 def login_institute(credentials: InstituteLogin, db: Session = Depends(get_db)):
-    # 1. Verify institute by slug
-    inst = db.query(Institute).filter(Institute.slug == credentials.slug).first()
+    # 1. Verify institute by slug or phone
+    if credentials.slug:
+        inst = db.query(Institute).filter(Institute.slug == credentials.slug).first()
+    else:
+        inst = db.query(Institute).filter(Institute.manager_phone == credentials.phone).first()
+        
     if not inst:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="المعرف اللفظي (Slug) للمعهد غير موجود بالنظام!"
+            detail="المعهد غير موجود بالنظام!"
         )
         
     # 2. Verify manager phone
