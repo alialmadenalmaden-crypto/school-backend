@@ -40,12 +40,21 @@ def startup_migration():
     from app.db.session import engine, SessionLocal
     from sqlalchemy import text, inspect
     
-    # 1. Unconditionally force database re-initialization to resolve database schema drift (e.g. column owner_user_id missing in institutes)
+    # 1. Check if the new 'users' table exists and has data. If not, seed cleanly
     inspector = inspect(engine)
     db = SessionLocal()
-    users_empty = True # Force re-initialization
+    users_empty = True
+    try:
+        tables = inspector.get_table_names()
+        if "users" in tables:
+            from app.models.tables import User
+            users_empty = (db.query(User).count() == 0)
+    except Exception as e:
+        print(f"Error checking users count: {e}")
+    finally:
+        db.close()
         
-    if True:  # Force schema recreate and seed
+    if "users" not in inspector.get_table_names() or users_empty:
         print("Forcing database re-initialization to fix schema drift...")
         print("New database structure ('users' table) not found or table is empty. Reinitializing schema...")
         try:
