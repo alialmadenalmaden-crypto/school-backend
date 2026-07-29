@@ -50,16 +50,9 @@ def startup_migration():
         print("New database structure ('users' table) not found or table is empty. Reinitializing schema...")
         try:
             db_type = engine.name
-            if db_type == "postgresql":
-                # Clean drop public schema CASCADE to clean existing tables
-                conn = engine.raw_connection()
-                conn.autocommit = True
-                cursor = conn.cursor()
-                cursor.execute("DROP SCHEMA IF EXISTS public CASCADE;")
-                cursor.execute("CREATE SCHEMA public;")
-                cursor.close()
-                conn.close()
-                print("Public schema dropped and recreated successfully on PostgreSQL.")
+            # Drop all existing tables safely using SQLAlchemy metadata (avoids schema permission issues)
+            Base.metadata.drop_all(bind=engine)
+            print("Successfully dropped all existing tables.")
             
             # Create all tables
             Base.metadata.create_all(bind=engine)
