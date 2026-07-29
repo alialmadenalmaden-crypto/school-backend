@@ -26,6 +26,20 @@ class CourseCreate(BaseModel):
     curriculum_id: Optional[str] = None
     language_id: Optional[str] = None
 
+@router.get("/catalog-info/")
+def get_catalog_info(db: Session = Depends(get_db)):
+    programs = db.query(CourseProgram).filter(CourseProgram.status == "active").all()
+    levels = db.query(Level).filter(Level.status == "active").all()
+    languages = db.query(Language).filter(Language.is_active == True).all()
+    curriculums = db.query(Curriculum).filter(Curriculum.status == "active").all()
+    
+    return {
+        "programs": [{"id": str(p.id), "name": p.name_ar} for p in programs],
+        "levels": [{"id": str(l.id), "name": l.name_ar} for l in levels],
+        "languages": [{"id": str(lg.id), "name": lg.name} for lg in languages],
+        "curriculums": [{"id": str(c.id), "name": c.name} for c in curriculums]
+    }
+
 @router.get("/{institute_slug}")
 def get_courses_by_institute(
     institute_slug: str, 
