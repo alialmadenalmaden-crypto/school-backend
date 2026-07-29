@@ -25,6 +25,7 @@ class CourseCreate(BaseModel):
     level_id: Optional[str] = None
     curriculum_id: Optional[str] = None
     language_id: Optional[str] = None
+    period: Optional[str] = "morning" # morning, evening
 
 @router.get("/catalog-info/")
 def get_catalog_info(db: Session = Depends(get_db)):
@@ -46,6 +47,7 @@ def get_courses_by_institute(
     program_id: Optional[str] = None,
     level_id: Optional[str] = None,
     language_id: Optional[str] = None,
+    period: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     # Fetch courses belonging to the institute slug
@@ -59,6 +61,8 @@ def get_courses_by_institute(
         query = query.filter(Course.level_id == level_id)
     if language_id:
         query = query.filter(Course.language_id == language_id)
+    if period:
+        query = query.filter(Course.period == period)
         
     courses = query.order_by(Course.created_at.desc()).all()
     
@@ -78,6 +82,7 @@ def get_courses_by_institute(
                 "start_date": "2026-09-01",
                 "end_date": "2026-10-01",
                 "class_time": "08:00 - 10:00",
+                "period": "morning",
                 "jeep_number": "777111222",
                 "category_name": "اللغات",
                 "program": None,
@@ -168,6 +173,7 @@ def create_course(course_data: CourseCreate, db: Session = Depends(get_db)):
         start_date=course_data.start_date,
         end_date=course_data.end_date,
         class_time=course_data.class_time,
+        period=course_data.period or "morning",
         
         # Link Phase 3/6 Entities
         program_id=course_data.program_id,
@@ -237,6 +243,7 @@ class CourseUpdate(BaseModel):
     level_id: Optional[str] = None
     curriculum_id: Optional[str] = None
     language_id: Optional[str] = None
+    period: Optional[str] = None
 
 @router.put("/{course_id}/")
 def update_course(course_id: str, course_data: CourseUpdate, db: Session = Depends(get_db)):
@@ -265,6 +272,8 @@ def update_course(course_id: str, course_data: CourseUpdate, db: Session = Depen
         course.end_date = course_data.end_date
     if course_data.class_time is not None:
         course.class_time = course_data.class_time
+    if course_data.period is not None:
+        course.period = course_data.period
         
     # Link Phase 3/6 updates
     if course_data.program_id is not None:

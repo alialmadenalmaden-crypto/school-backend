@@ -378,6 +378,7 @@ class Course(Base):
     start_date = Column(String(100), nullable=True)
     end_date = Column(String(100), nullable=True)
     class_time = Column(String(100), nullable=True, default="08:00 - 10:00")
+    period = Column(String(20), nullable=True, default="morning") # morning, evening
     created_at = Column(DateTime, default=datetime.utcnow)
     
     institute = relationship("Institute", back_populates="courses")
