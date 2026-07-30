@@ -87,6 +87,8 @@ def startup_migration():
                     conn.execute(text("ALTER TABLE courses ADD COLUMN class_time VARCHAR(100) DEFAULT '08:00 - 10:00';"))
                 if "category_name" not in cols:
                     conn.execute(text("ALTER TABLE courses ADD COLUMN category_name VARCHAR(100);"))
+                if "period" not in cols:
+                    conn.execute(text("ALTER TABLE courses ADD COLUMN period VARCHAR(50);"))
                 result_banners = conn.execute(text("PRAGMA table_info(banners);")).fetchall()
                 banners_cols = [r[1] for r in result_banners]
                 if "is_active" not in banners_cols:
@@ -105,6 +107,7 @@ def startup_migration():
                 alter_statements = [
                     "ALTER TABLE courses ADD COLUMN IF NOT EXISTS class_time VARCHAR(100) DEFAULT '08:00 - 10:00';",
                     "ALTER TABLE courses ADD COLUMN IF NOT EXISTS category_name VARCHAR(100);",
+                    "ALTER TABLE courses ADD COLUMN IF NOT EXISTS period VARCHAR(50);",
                     "ALTER TABLE students ADD COLUMN IF NOT EXISTS fcm_token VARCHAR(255);",
                     "ALTER TABLE institute_admins ADD COLUMN IF NOT EXISTS fcm_token VARCHAR(255);",
                     "ALTER TABLE banners ALTER COLUMN image_url TYPE TEXT;",
