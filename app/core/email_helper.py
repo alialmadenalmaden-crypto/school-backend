@@ -78,25 +78,63 @@ CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__fil
 
 def send_otp_email(to_email: str, code: str) -> bool:
     """Sends a formatted HTML email with the verification OTP code."""
-    # Default fallback values
+    
+    html_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; direction: rtl; text-align: right; background-color: #f7fafc; padding: 20px;">
+        <div style="max-width: 500px; margin: auto; padding: 24px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #1e3a8a; margin: 0; font-size: 22px;">تطبيق مسار التعليمي</h2>
+                <p style="color: #718096; font-size: 14px; margin-top: 5px;">رحلتك التعليمية تبدأ من هنا</p>
+            </div>
+            <hr style="border: 0; border-top: 1px solid #edf2f7; margin-bottom: 20px;">
+            <p style="font-size: 15px; color: #2d3748; line-height: 1.6;">مرحباً بك في مسار،</p>
+            <p style="font-size: 15px; color: #4a5568; line-height: 1.6;">رمز التحقق الخاص بك لإتمام عملية التسجيل وتفعيل الحساب هو:</p>
+            
+            <div style="font-size: 28px; font-weight: bold; text-align: center; color: #1e3a8a; background: #ebf8ff; padding: 16px; border: 1px dashed #bee3f8; border-radius: 12px; margin: 24px 0; letter-spacing: 5px;">
+                {code}
+            </div>
+            
+            <p style="font-size: 13px; color: #e53e3e; line-height: 1.6; font-weight: 500;">🚨 يرجى عدم مشاركة هذا الرمز مع أي شخص آخر لحماية أمن حسابك.</p>
+            <hr style="border: 0; border-top: 1px solid #edf2f7; margin-top: 24px; margin-bottom: 20px;">
+            <p style="font-size: 13px; color: #718096; line-height: 1.6; margin: 0;">شكراً لك،<br>فريق عمل تطبيق مسار</p>
+        </div>
+    </body>
+    </html>
+    """
+
+    # 1. Try sending via Resend API Key
+    resend_api_key = os.getenv("RESEND_API_KEY", "")
+    if resend_api_key:
+        import urllib.request
+        import json
+        try:
+            url = "https://api.resend.com/emails"
+            headers = {
+                "Authorization": f"Bearer {resend_api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "from": "Msaar App <onboarding@resend.dev>",
+                "to": to_email,
+                "subject": "رمز التحقق لتطبيق مسار التعليمي",
+                "html": html_body
+            }
+            data_encoded = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=data_encoded, headers=headers, method="POST")
+            with urllib.request.urlopen(req) as response:
+                print(f"RESEND EMAIL SUCCESS to {to_email}: {response.read().decode('utf-8')}")
+                return True
+        except Exception as e:
+            print(f"RESEND EMAIL ERROR, falling back to SMTP: {e}")
+
+    # 2. Fallback to standard SMTP
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
     smtp_username = "msaar.student@gmail.com"
     smtp_password = "antr klce mivp nmty"
 
-    # Load from email_config.json if exists, else create template
-    if not os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                json.dump({
-                    "smtp_server": "smtp.gmail.com",
-                    "smtp_port": 587,
-                    "smtp_username": "msaar.student@gmail.com",
-                    "smtp_password": "ضع_كلمة_مرور_التطبيق_هنا_المكونة_من_16_حرفا"
-                }, f, indent=4, ensure_ascii=False)
-        except Exception as e:
-            print(f"Error creating email_config.json template: {e}")
-    else:
+    if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                 config = json.load(f)
@@ -104,10 +142,9 @@ def send_otp_email(to_email: str, code: str) -> bool:
                 smtp_port = config.get("smtp_port", smtp_port)
                 smtp_username = config.get("smtp_username", smtp_username)
                 smtp_password = config.get("smtp_password", "")
-        except Exception as e:
-            print(f"Error reading email_config.json: {e}")
+        except Exception:
+            pass
 
-    # Fallback to env variables if set
     smtp_server = os.getenv("SMTP_SERVER", smtp_server)
     smtp_port = int(os.getenv("SMTP_PORT", str(smtp_port)))
     smtp_username = os.getenv("SMTP_USERNAME", smtp_username)
@@ -123,39 +160,15 @@ def send_otp_email(to_email: str, code: str) -> bool:
         msg['From'] = smtp_username
         msg['To'] = to_email
         msg['Subject'] = "رمز التحقق لتطبيق مسار التعليمي"
-        
-        body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; direction: rtl; text-align: right; background-color: #f7fafc; padding: 20px;">
-            <div style="max-width: 500px; margin: auto; padding: 24px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h2 style="color: #1e3a8a; margin: 0; font-size: 22px;">تطبيق مسار التعليمي</h2>
-                    <p style="color: #718096; font-size: 14px; margin-top: 5px;">رحلتك التعليمية تبدأ من هنا</p>
-                </div>
-                <hr style="border: 0; border-top: 1px solid #edf2f7; margin-bottom: 20px;">
-                <p style="font-size: 15px; color: #2d3748; line-height: 1.6;">مرحباً بك في مسار،</p>
-                <p style="font-size: 15px; color: #4a5568; line-height: 1.6;">رمز التحقق الخاص بك لإتمام عملية التسجيل وتفعيل الحساب هو:</p>
-                
-                <div style="font-size: 28px; font-weight: bold; text-align: center; color: #1e3a8a; background: #ebf8ff; padding: 16px; border: 1px dashed #bee3f8; border-radius: 12px; margin: 24px 0; letter-spacing: 5px;">
-                    {code}
-                </div>
-                
-                <p style="font-size: 13px; color: #e53e3e; line-height: 1.6; font-weight: 500;">🚨 يرجى عدم مشاركة هذا الرمز مع أي شخص آخر لحماية أمن حسابك.</p>
-                <hr style="border: 0; border-top: 1px solid #edf2f7; margin-top: 24px; margin-bottom: 20px;">
-                <p style="font-size: 13px; color: #718096; line-height: 1.6; margin: 0;">شكراً لك،<br>فريق عمل تطبيق مسار</p>
-            </div>
-        </body>
-        </html>
-        """
-        msg.attach(MIMEText(body, 'html', 'utf-8'))
+        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
         
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(smtp_username, smtp_password)
         server.sendmail(smtp_username, to_email, msg.as_string())
         server.quit()
-        print(f"EMAIL SENT SUCCESS to {to_email}")
+        print(f"SMTP EMAIL SENT SUCCESS to {to_email}")
         return True
-    except Exception as e:
-        print(f"EMAIL SENT ERROR to {to_email}: {e}")
+    except Exception as smtp_err:
+        print(f"SMTP EMAIL SENT ERROR to {to_email}: {smtp_err}")
         return False
