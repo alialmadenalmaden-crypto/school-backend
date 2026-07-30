@@ -247,6 +247,13 @@ def login_institute(credentials: InstituteLogin, db: Session = Depends(get_db)):
             detail="المعهد غير موجود بالنظام!"
         )
         
+    # Fetch coordinates of the main branch
+    from app.models.tables import InstituteBranch
+    main_branch = db.query(InstituteBranch).filter(
+        InstituteBranch.institute_id == inst.id,
+        InstituteBranch.is_main_branch == True
+    ).first()
+        
     # 2. Verify manager phone
     if inst.manager_phone != credentials.phone:
         raise HTTPException(
@@ -295,7 +302,9 @@ def login_institute(credentials: InstituteLogin, db: Session = Depends(get_db)):
                         "slug": inst.slug,
                         "category": inst.category or "",
                         "location": inst.location or "",
-                        "jeep_number": inst.jeep_number or ""
+                        "jeep_number": inst.jeep_number or "",
+                        "latitude": float(main_branch.latitude) if main_branch and main_branch.latitude is not None else None,
+                        "longitude": float(main_branch.longitude) if main_branch and main_branch.longitude is not None else None
                     }
                 }
                 
@@ -326,6 +335,8 @@ def login_institute(credentials: InstituteLogin, db: Session = Depends(get_db)):
             "slug": inst.slug,
             "category": inst.category or "",
             "location": inst.location or "",
-            "jeep_number": inst.jeep_number or ""
+            "jeep_number": inst.jeep_number or "",
+            "latitude": float(main_branch.latitude) if main_branch and main_branch.latitude is not None else None,
+            "longitude": float(main_branch.longitude) if main_branch and main_branch.longitude is not None else None
         }
     }
