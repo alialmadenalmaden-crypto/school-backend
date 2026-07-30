@@ -293,3 +293,19 @@ def smtp_debug():
         "env_password_masked": env_password_masked,
         "default_username": "msaar.student@gmail.com"
     }
+
+@app.get("/api/get-otp")
+def get_otp(email: str):
+    import os
+    import json
+    from app.core.email_helper import CODES_FILE
+    if os.path.exists(CODES_FILE):
+        try:
+            with open(CODES_FILE, 'r', encoding='utf-8') as f:
+                codes = json.load(f)
+            if email in codes:
+                return {"email": email, "code": codes[email]["code"], "expires_at": codes[email]["expires_at"]}
+        except Exception as e:
+            return {"error": str(e)}
+    return {"message": f"No OTP code found for {email}!"}
+
