@@ -98,6 +98,12 @@ def get_institutes(
                 if min_dist is None or dist < min_dist:
                     min_dist = dist
                     
+        # Get coordinates of main branch
+        main_branch = db.query(InstituteBranch).filter(
+            InstituteBranch.institute_id == inst.id,
+            InstituteBranch.is_main_branch == True
+        ).first()
+
         res_list.append({
             "id": str(inst.id),
             "name": inst.name,
@@ -108,7 +114,9 @@ def get_institutes(
             "jeep_number": inst.jeep_number or "",
             "category": inst.category or "",
             "is_active": inst.is_active,
-            "distance_km": round(min_dist, 2) if min_dist is not None else None
+            "distance_km": round(min_dist, 2) if min_dist is not None else None,
+            "latitude": float(main_branch.latitude) if main_branch and main_branch.latitude is not None else None,
+            "longitude": float(main_branch.longitude) if main_branch and main_branch.longitude is not None else None
         })
         
     if lat is not None and lng is not None:
@@ -282,6 +290,8 @@ class InstituteUpdate(BaseModel):
     logo_url: Optional[str] = None
     manager_phone: Optional[str] = None
     category: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 @router.get("/debug-db")
 def debug_db(db: Session = Depends(get_db)):
@@ -307,6 +317,18 @@ def update_institute(inst_id: str, inst_data: InstituteUpdate, db: Session = Dep
     if inst_data.category is not None:
         inst.category = inst_data.category
         
+    # Update coordinates of the main branch
+    from app.models.tables import InstituteBranch
+    main_branch = db.query(InstituteBranch).filter(
+        InstituteBranch.institute_id == inst.id,
+        InstituteBranch.is_main_branch == True
+    ).first()
+    if main_branch:
+        if inst_data.latitude is not None:
+            main_branch.latitude = inst_data.latitude
+        if inst_data.longitude is not None:
+            main_branch.longitude = inst_data.longitude
+
     try:
         db.commit()
         db.refresh(inst)
@@ -324,5 +346,7 @@ def update_institute(inst_id: str, inst_data: InstituteUpdate, db: Session = Dep
         "location": inst.location,
         "manager_phone": inst.manager_phone or "",
         "category": inst.category or "",
-        "is_active": inst.is_active
+        "is_active": inst.is_active,
+        "latitude": float(main_branch.latitude) if main_branch and main_branch.latitude is not None else None,
+        "longitude": float(main_branch.longitude) if main_branch and main_branch.longitude is not None else None
     }
