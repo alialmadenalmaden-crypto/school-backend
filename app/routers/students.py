@@ -67,6 +67,12 @@ def delete_student(student_id: str, db: Session = Depends(get_db)):
             detail="الطالب غير موجود!"
         )
     try:
+        # Also find and delete from new User table
+        if student.email:
+            from app.models.tables import User
+            user = db.query(User).filter(User.email == student.email).first()
+            if user:
+                db.delete(user)
         db.delete(student)
         db.commit()
     except Exception as e:
