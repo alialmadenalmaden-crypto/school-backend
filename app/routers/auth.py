@@ -251,6 +251,28 @@ def resend_code(email: str, db: Session = Depends(get_db)):
         "message": "تم إعادة إرسال رمز التحقق بنجاح!"
     }
 
+@router.post("/delete-student-by-email")
+def delete_student_by_email(email: str, db: Session = Depends(get_db)):
+    from app.models.tables import Student, User
+    deleted_s = False
+    deleted_u = False
+    student = db.query(Student).filter(Student.email == email).first()
+    if student:
+        db.delete(student)
+        deleted_s = True
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        db.delete(user)
+        deleted_u = True
+    db.commit()
+    return {
+        "status": "success", 
+        "message": f"Successfully cleared {email}", 
+        "deleted_from_students": deleted_s,
+        "deleted_from_users": deleted_u
+    }
+
+
 @router.post("/institute/login")
 @router.post("/institute/login/")
 def login_institute(credentials: InstituteLogin, db: Session = Depends(get_db)):
