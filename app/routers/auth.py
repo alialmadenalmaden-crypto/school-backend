@@ -34,14 +34,21 @@ def register_student(student: StudentRegister, db: Session = Depends(get_db)):
         else:
             clean_phone = "+967" + clean_phone
 
-    # Check if student already exists in legacy Student table or new User table
-    existing_student = db.query(Student).filter(Student.email == student.email).first()
-    existing_user = db.query(User).filter((User.email == student.email) | (User.phone == clean_phone)).first()
-    
-    if existing_student or existing_user:
+    # Check if email already exists
+    email_taken_student = db.query(Student).filter(Student.email == student.email).first()
+    email_taken_user = db.query(User).filter(User.email == student.email).first()
+    if email_taken_student or email_taken_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="البريد الإلكتروني أو رقم الهاتف مسجل بالفعل!"
+            detail="هذا البريد الإلكتروني مسجل بالفعل لمستخدم آخر!"
+        )
+        
+    # Check if phone already exists
+    phone_taken_user = db.query(User).filter(User.phone == clean_phone).first()
+    if phone_taken_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="رقم الهاتف هذا مسجل بالفعل لمستخدم آخر!"
         )
         
     # 1. Create new student in legacy Student table (for backward compatibility)
