@@ -4,8 +4,21 @@ from app.db.session import get_db
 from app.models.tables import Institute, InstituteAdmin
 from pydantic import BaseModel
 from typing import Optional
+import math
 
 router = APIRouter()
+
+def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    # Earth radius in kilometers
+    R = 6371.0
+    
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    
+    a = math.sin(d_lat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    return R * c
 
 class InstituteCreate(BaseModel):
     name: str
@@ -24,7 +37,11 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 @router.get("/")
-def get_institutes(db: Session = Depends(get_db)):
+def get_institutes(
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    db: Session = Depends(get_db)
+):
     # Fetch all institutes from PostgreSQL (so Super Admin can manage all of them)
     institutes = db.query(Institute).order_by(Institute.created_at.desc()).all()
     
@@ -39,7 +56,8 @@ def get_institutes(db: Session = Depends(get_db)):
                 "location": "صنعاء - شارع بغداد",
                 "manager_phone": "777111222",
                 "category": "اللغات",
-                "is_active": True
+                "is_active": True,
+                "distance_km": None
             },
             {
                 "id": "lang2",
@@ -49,7 +67,8 @@ def get_institutes(db: Session = Depends(get_db)):
                 "location": "صنعاء - حدة",
                 "manager_phone": "777333444",
                 "category": "اللغات",
-                "is_active": True
+                "is_active": True,
+                "distance_km": None
             },
             {
                 "id": "comp1",
@@ -59,12 +78,27 @@ def get_institutes(db: Session = Depends(get_db)):
                 "location": "صنعاء - الجراف",
                 "manager_phone": "777555666",
                 "category": "الحاسوب",
-                "is_active": True
+                "is_active": True,
+                "distance_km": None
             }
         ]
         
-    return [
-        {
+    res_list = []
+    for inst in institutes:
+        min_dist = None
+        # Find minimum distance to any branch of this institute
+        from app.models.tables import InstituteBranch
+        branches = db.query(InstituteBranch).filter(InstituteBranch.institute_id == inst.id).all()
+        for branch in branches:
+            if branch.latitude is not None and branch.longitude is not None:
+                dist = calculate_haversine_distance(
+                    float(lat), float(lng), 
+                    float(branch.latitude), float(branch.longitude)
+                )
+                if min_dist is None or dist < min_dist:
+                    min_dist = dist
+                    
+        res_list.append({
             "id": str(inst.id),
             "name": inst.name,
             "slug": inst.slug,
@@ -73,10 +107,15 @@ def get_institutes(db: Session = Depends(get_db)):
             "manager_phone": inst.manager_phone or "",
             "jeep_number": inst.jeep_number or "",
             "category": inst.category or "",
-            "is_active": inst.is_active
-        }
-        for inst in institutes
-    ]
+            "is_active": inst.is_active,
+            "distance_km": round(min_dist, 2) if min_dist is not None else None
+        })
+        
+    if lat is not None and lng is not None:
+        # Sort by distance_km (nulls last)
+        res_list.sort(key=lambda x: x["distance_km"] if x["distance_km"] is not None else 999999)
+        
+    return res_list
 
 @router.post("/")
 def create_institute(inst_data: InstituteCreate, db: Session = Depends(get_db)):
