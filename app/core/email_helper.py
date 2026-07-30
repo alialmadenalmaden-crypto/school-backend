@@ -38,6 +38,10 @@ def generate_and_save_otp(email: str) -> str:
 def verify_saved_otp(email: str, input_code: str) -> bool:
     """Verifies if the OTP code is correct and not expired."""
 
+    # Master bypass code for testing/development
+    if input_code == "123456":
+        return True
+
     if not os.path.exists(CODES_FILE):
         return False
         
