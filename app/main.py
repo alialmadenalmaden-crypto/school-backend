@@ -171,6 +171,7 @@ def db_status():
     
     db = SessionLocal()
     users_info = []
+    students_info = []
     institutes_info = []
     try:
         if "users" in tables:
@@ -195,6 +196,16 @@ def db_status():
                     "manager_phone": i.manager_phone,
                     "is_active": i.is_active
                 })
+        if "students" in tables:
+            from app.models.tables import Student
+            studs = db.query(Student).all()
+            for s in studs:
+                students_info.append({
+                    "email": s.email,
+                    "full_name": s.full_name,
+                    "phone": s.phone,
+                    "is_email_verified": s.is_email_verified
+                })
     except Exception as e:
         users_info = f"Error: {e}"
     finally:
@@ -203,8 +214,30 @@ def db_status():
     return {
         "tables": tables,
         "users": users_info,
+        "students": students_info,
         "institutes": institutes_info,
         "database_type": engine.name
+    }
+
+@app.post("/api/admin/delete-student-by-email")
+def delete_student_by_email(email: str, db: Session = Depends(get_db)):
+    from app.models.tables import Student, User
+    deleted_s = False
+    deleted_u = False
+    student = db.query(Student).filter(Student.email == email).first()
+    if student:
+        db.delete(student)
+        deleted_s = True
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        db.delete(user)
+        deleted_u = True
+    db.commit()
+    return {
+        "status": "success", 
+        "message": f"Successfully cleared {email}", 
+        "deleted_from_students": deleted_s,
+        "deleted_from_users": deleted_u
     }
 
 @app.get("/")
