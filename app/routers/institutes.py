@@ -160,11 +160,12 @@ def create_institute(inst_data: InstituteCreate, db: Session = Depends(get_db)):
         db.refresh(new_inst)
         
         # Create default Admin login credentials for this institute
+        from app.core.security import get_password_hash
         new_admin = InstituteAdmin(
             institute_id=new_inst.id,
             name="مدير المعهد",
             email=inst_data.admin_email,
-            password_hash=inst_data.admin_password, # Storing plain/initial password
+            password_hash=get_password_hash(inst_data.admin_password), # Storing hashed password
             is_active=True
         )
         db.add(new_admin)

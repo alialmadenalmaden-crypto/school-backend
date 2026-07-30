@@ -151,10 +151,9 @@ def startup_migration():
         inst_admins = db.query(InstituteAdmin).all()
         for ia in inst_admins:
             if ia.password_hash and not (ia.password_hash.startswith("$2b$") or ia.password_hash.startswith("$2a$")):
-                if ia.password_hash == "1234":
-                    ia.password_hash = get_password_hash("1234")
-                else:
-                    ia.password_hash = get_password_hash(ia.password_hash)
+                ia.password_hash = get_password_hash(ia.password_hash)
+            if not ia.phone and ia.institute:
+                ia.phone = ia.institute.manager_phone
         db.commit()
         print("Database password encryption migration completed successfully.")
     except Exception as e:
