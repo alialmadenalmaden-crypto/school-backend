@@ -112,10 +112,11 @@ def send_otp_email(to_email: str, code: str) -> bool:
     smtp_port = int(os.getenv("SMTP_PORT", str(smtp_port)))
     smtp_username = os.getenv("SMTP_USERNAME", smtp_username)
     smtp_password = os.getenv("SMTP_PASSWORD", smtp_password)
-    
-    if not smtp_password or "ضع_كلمة_مرور_التطبيق_هنا" in smtp_password:
-        print(f"\n[SIMULATED EMAIL] To: {to_email} | Sender: {smtp_username} | Subject: رمز التحقق لتطبيق مسار | Body: رمز التحقق الخاص بك هو: {code}\n")
-        return True
+    if not smtp_password or "ضع_كلمة_مرور" in smtp_password:
+        smtp_username = "msaar.student@gmail.com"
+        smtp_password = "antr klce mivp nmty"
+        smtp_server = "smtp.gmail.com"
+        smtp_port = 587
 
     try:
         msg = MIMEMultipart()
