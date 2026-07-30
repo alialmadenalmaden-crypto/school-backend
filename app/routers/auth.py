@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import BackgroundTasks, APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.tables import Student, Institute, InstituteAdmin, SuperAdmin, User, Role, UserRole
@@ -25,7 +25,7 @@ class InstituteLogin(BaseModel):
     password: str
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-def register_student(student: StudentRegister, db: Session = Depends(get_db)):
+def register_student(student: StudentRegister, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # Clean phone number formats
     clean_phone = student.phone.strip()
     if not clean_phone.startswith("+"):
@@ -93,9 +93,9 @@ def register_student(student: StudentRegister, db: Session = Depends(get_db)):
             detail=f"فشل حفظ البيانات في قاعدة البيانات: {str(e)}"
         )
         
-    # Generate OTP and send email
+    # Generate OTP and send email asynchronously in background
     code = generate_and_save_otp(student.email)
-    send_otp_email(student.email, code)
+    background_tasks.add_task(send_otp_email, student.email, code)
     
     return {
         "status": "success",
@@ -234,7 +234,7 @@ def verify_email(email: str, code: str, db: Session = Depends(get_db)):
     }
 
 @router.post("/resend-code")
-def resend_code(email: str, db: Session = Depends(get_db)):
+def resend_code(email: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     student = db.query(Student).filter(Student.email == email).first()
     user = db.query(User).filter(User.email == email).first()
     
@@ -245,7 +245,7 @@ def resend_code(email: str, db: Session = Depends(get_db)):
         )
         
     code = generate_and_save_otp(email)
-    send_otp_email(email, code)
+    background_tasks.add_task(send_otp_email, email, code)
     return {
         "status": "success",
         "message": "تم إعادة إرسال رمز التحقق بنجاح!"

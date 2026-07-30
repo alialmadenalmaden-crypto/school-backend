@@ -14,5 +14,7 @@ try:
     print(data.get("users"))
     print("\nINSTITUTES:")
     print(data.get("institutes"))
+    print("\nSTUDENTS:")
+    print(data.get("students"))
 except Exception as e:
     print(f"Error: {e}")
