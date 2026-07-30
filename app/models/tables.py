@@ -266,6 +266,9 @@ class InstituteAdmin(Base):
     password_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
     fcm_token = Column(String(255), nullable=True)
+    phone = Column(String(30), nullable=True)
+    role = Column(String(30), default="admin")
+    permissions = Column(String(255), default="all")
     created_at = Column(DateTime, default=datetime.utcnow)
     
     institute = relationship("Institute", back_populates="admins")

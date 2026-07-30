@@ -101,6 +101,12 @@ def startup_migration():
                 admin_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(institute_admins);")).fetchall()]
                 if "fcm_token" not in admin_cols:
                     conn.execute(text("ALTER TABLE institute_admins ADD COLUMN fcm_token VARCHAR(255);"))
+                if "phone" not in admin_cols:
+                    conn.execute(text("ALTER TABLE institute_admins ADD COLUMN phone VARCHAR(30);"))
+                if "role" not in admin_cols:
+                    conn.execute(text("ALTER TABLE institute_admins ADD COLUMN role VARCHAR(30) DEFAULT 'admin';"))
+                if "permissions" not in admin_cols:
+                    conn.execute(text("ALTER TABLE institute_admins ADD COLUMN permissions VARCHAR(255) DEFAULT 'all';"))
             else:
                 # Run each alter statement in its own transaction context/block
                 # so that a failure in one (e.g. invalid type cast) does not prevent the others from running.
@@ -110,6 +116,9 @@ def startup_migration():
                     "ALTER TABLE courses ADD COLUMN IF NOT EXISTS period VARCHAR(50);",
                     "ALTER TABLE students ADD COLUMN IF NOT EXISTS fcm_token VARCHAR(255);",
                     "ALTER TABLE institute_admins ADD COLUMN IF NOT EXISTS fcm_token VARCHAR(255);",
+                    "ALTER TABLE institute_admins ADD COLUMN IF NOT EXISTS phone VARCHAR(30);",
+                    "ALTER TABLE institute_admins ADD COLUMN IF NOT EXISTS role VARCHAR(30) DEFAULT 'admin';",
+                    "ALTER TABLE institute_admins ADD COLUMN IF NOT EXISTS permissions VARCHAR(255) DEFAULT 'all';",
                     "ALTER TABLE banners ALTER COLUMN image_url TYPE TEXT;",
                     "ALTER TABLE banners ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"
                 ]
