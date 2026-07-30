@@ -202,3 +202,40 @@ def db_status():
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Educational Platform API"}
+
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
+from app.db.session import get_db
+from fastapi import Depends
+
+@app.post("/api/admin/clear-dummy-data")
+def clear_dummy_data(db: Session = Depends(get_db)):
+    delete_statements = [
+        "TRUNCATE TABLE bookings CASCADE;",
+        "TRUNCATE TABLE reviews CASCADE;",
+        "TRUNCATE TABLE notifications CASCADE;",
+        "TRUNCATE TABLE audit_logs CASCADE;",
+        "TRUNCATE TABLE promotions CASCADE;",
+        "TRUNCATE TABLE courses CASCADE;",
+        "TRUNCATE TABLE course_programs CASCADE;",
+        "TRUNCATE TABLE levels CASCADE;",
+        "TRUNCATE TABLE curriculums CASCADE;",
+        "TRUNCATE TABLE banners CASCADE;",
+        "TRUNCATE TABLE super_admin_requests CASCADE;",
+        "TRUNCATE TABLE institute_branches CASCADE;",
+        "TRUNCATE TABLE institute_admins CASCADE;",
+        "TRUNCATE TABLE institute_members CASCADE;",
+        "TRUNCATE TABLE institutes CASCADE;",
+        "TRUNCATE TABLE students CASCADE;",
+        "DELETE FROM user_roles WHERE user_id IN (SELECT id FROM users WHERE email != 'admin@msaar.app');",
+        "DELETE FROM users WHERE email != 'admin@msaar.app';"
+    ]
+    try:
+        from sqlalchemy import text
+        for sql in delete_statements:
+            db.execute(text(sql))
+        db.commit()
+        return {"status": "success", "message": "All dummy data has been successfully deleted from PostgreSQL!"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
