@@ -212,6 +212,8 @@ class UpdateSettingsRequest(BaseModel):
     email: str
     jeep_number: str
     logo_url: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 # Change admin password (first time or later)
 @router.post("/admin/change-password/")
@@ -248,8 +250,31 @@ def update_settings(data: UpdateSettingsRequest, db: Session = Depends(get_db)):
     inst.jeep_number = data.jeep_number
     if data.logo_url is not None:
         inst.logo_url = data.logo_url
+        
+    # Update coordinates of the main branch
+    from app.models.tables import InstituteBranch
+    main_branch = db.query(InstituteBranch).filter(
+        InstituteBranch.institute_id == inst.id,
+        InstituteBranch.is_main_branch == True
+    ).first()
+    
+    if main_branch:
+        if data.latitude is not None:
+            main_branch.latitude = data.latitude
+        if data.longitude is not None:
+            main_branch.longitude = data.longitude
+            
     db.commit()
-    return {"status": "success", "message": "تم تحديث الإعدادات بنجاح!", "jeep_number": inst.jeep_number, "logo_url": inst.logo_url}
+    
+    # Return updated values
+    return {
+        "status": "success", 
+        "message": "تم تحديث الإعدادات بنجاح!", 
+        "jeep_number": inst.jeep_number, 
+        "logo_url": inst.logo_url,
+        "latitude": float(main_branch.latitude) if main_branch and main_branch.latitude is not None else None,
+        "longitude": float(main_branch.longitude) if main_branch and main_branch.longitude is not None else None
+    }
 
 class InstituteUpdate(BaseModel):
     name: Optional[str] = None
