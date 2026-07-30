@@ -209,9 +209,21 @@ def verify_email(email: str, code: str, db: Session = Depends(get_db)):
         
     db.commit()
     
+    # Generate a real JWT token for the student
+    student_id = student.id if student else (user.id if user else None)
+    token = create_access_token(data={"sub": str(student_id), "role": "student"})
+    
     return {
         "status": "success",
-        "message": "تم تفعيل الحساب بنجاح!"
+        "message": "تم تفعيل الحساب بنجاح!",
+        "access_token": token,
+        "token_type": "bearer",
+        "student": {
+            "id": str(student_id),
+            "full_name": student.full_name if student else f"{user.first_name} {user.last_name or ''}".strip(),
+            "email": email,
+            "phone": student.phone if student else (user.phone if user else "")
+        }
     }
 
 @router.post("/resend-code")
